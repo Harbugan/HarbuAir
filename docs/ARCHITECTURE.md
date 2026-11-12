@@ -1,6 +1,6 @@
 # HarbuAir technical architecture and evidence log
 
-**Status:** working hypothesis, not an implemented or verified architecture.
+**Status:** Phase 1 desk research done (2026-11-12); nothing tested on hardware. No sender approved.
 
 ## Goal and constraints
 
@@ -57,6 +57,67 @@ For each candidate implementation record:
 
 Do not treat a project's README claims as hardware verification.
 
+## Phase 1 findings: sender candidates (desk research, 2026-11-12)
+
+**Method and limits.** Findings come from fetching public GitHub/docs pages through a summarising fetch tool and web searches. Source code was **not** cloned or read, the GitHub API and pyatv.dev were unreachable from this session, and nothing was run. Every row is therefore "reported", not "verified". Commit/tag pins are still TODO.
+
+| Candidate | Role | License | Protocol (as reported) | Android fit | Evidence / unknowns |
+| --- | --- | --- | --- | --- | --- |
+| [pyatv](https://github.com/postlund/pyatv) | Sender/controller (Python asyncio) | MIT (badge on repo page) | RAOP (AirPlay 1-style) `stream_file`; WAV/MP3/FLAC/OGG; HAP auth only for AirPlay 2 remote-control; only *legacy* pairing for RAOP; password devices via RAOP only. Supported-features doc lists HomePod mini verified on v14.5 | No native Android; Python only (Termux/Chaquopy untested) | Streams **files/URLs**, one stream at a time; live PCM input not documented (unknown). No stereo-pair statement. Release/tag date unverified |
+| [libraop (philippe44)](https://github.com/philippe44/libraop) | Sender (RAOP player + library, C) | **Unknown** (LICENSE path 404; check repo) | "RAOP v2 protocol"; interactive pairing option; AirPlay 2 **not stated** | Page lists Win/macOS/Linux; Android not mentioned, but C code is NDK-plausible (unverified) | Used by the same author in bridges (AirConnect, lms-raop). HomePod not mentioned |
+| [OwnTone](https://github.com/owntone/owntone-server) | Media server with AirPlay 1+2 output | GPL-2.0 (COPYING) | AirPlay 1 and 2 receivers as outputs | Server daemon, not a library; GPL blocks linking into a permissive app | Useful as protocol reference only. HomePod/stereo pair not stated |
+| [AirConnect](https://github.com/philippe44/AirConnect) | Bridge (UPnP/Cast -> AirPlay) | Unknown | Not the right direction for this project | No Android | Excluded |
+| Shairport Sync, UxPlay, android-airplay-server, Kotlin AirPlay receiver, java-airplay-lib | **Receivers** | various | n/a | n/a | Excluded per AGENTS.md rule 4 |
+| Music Assistant AirPlay provider | Sender (Python, uses RAOP + AirPlay 2) | Not checked | Docs: RAOP default, AirPlay 2 supported; HomePod needs "Everyone on the same network" or the right password; password pairing/PTP not yet supported | n/a | Source of the stereo-pair caveat below |
+| Elixir `airplay` (hex.pm) | Sender | Not checked | Claims verified streaming to HomePods; AirPlay 2 has transient SRP, ChaCha20-Poly1305 RTSP, PTP | Not JVM | Self-reported, not independently verified |
+
+No Android/JVM-native AirPlay **sender** library was found. Search hits were receivers or an apparently stale (~2015) repo. Absence of a hit is not proof none exists.
+
+### Key facts and hypotheses
+
+- **Fact (reported by pyatv docs):** a HomePod mini was verified as a RAOP target by pyatv. Hardware/firmware was v14.5, which is old.
+- **Fact (reported by Music Assistant docs):** the HomePod may refuse RAOP audio unless its AirPlay access setting is "Everyone on the same network" (or the password is supplied).
+- **Reported, unconfirmed:** a Roon forum post says a HomePod that is half of a stereo pair, set as a TV default speaker, or grouped may refuse third-party AirPlay 1 audio. This is exactly the owner's setup and is the main go/no-go risk. Needs a hardware test.
+- **Hypothesis H1:** the pair is advertised as one logical AirPlay target (likely the group leader) that accepts RAOP and plays both channels. Unverified.
+- **Hypothesis H2:** RAOP/ALAC-over-RTP with transient/legacy pairing is enough; full AirPlay 2 (PTP, HAP) is not needed for a first pass. Unverified. If H2 holds, latency is typically ~2 s (RAOP buffering; number is a general expectation, not measured here), which is acceptable for vinyl with no video.
+- **Not an issue to bypass:** if a HomePod requires a password or Home-access approval, the owner must configure it; we will not circumvent authentication.
+
+### Go/no-go (provisional)
+
+**CONDITIONAL GO for Experiment 0 only.** There is a credible open-source sender (pyatv, MIT) that reports HomePod support, so a test is worthwhile. **No-go for scaffolding the Android app** until Gate A evidence exists. Not yet decided: Android implementation route (NDK + libraop if license permits, or a clean-room RAOP sender in Kotlin from [openairplay spec](https://openairplay.github.io/airplay-spec/)).
+
+### Experiment 0 (smallest test, no Android code)
+
+**Hypothesis:** the owner's HomePod stereo pair accepts a RAOP stream from a third-party sender on the LAN and plays left and right on the correct speakers.
+**Why not Android first:** isolates the Apple-side risk (H1/H2) from Android build effort. It tests the pair, not the Android client. It does **not** satisfy Gate A.
+**Needs real hardware:** yes (owner's pair, any computer or phone with Python on the same Wi-Fi/VLAN).
+
+Procedure (untested; commands are a starting point):
+1. In Home app: set the pair's AirPlay access to "Everyone on the same network" temporarily. Note this lowers security; revert afterwards.
+2. Generate a 10 s stereo WAV: 440 Hz left only for 3 s, 880 Hz right only for 3 s, then both. Low level.
+3. `pip install pyatv`, then `atvremote scan` and record which entries exist for the pair (names/IPs stay out of git).
+4. `atvremote --id <id> --protocol raop stream_file=test.wav` (flags may differ by version; check `atvremote --help`).
+5. Record: connects? Which speaker plays which tone? Both speakers? Startup delay; behavior with Apple TV idle vs playing; stop/restart x5.
+6. Repeat targeting each individual HomePod if the pair appears as separate entries.
+
+Outcomes: **PASS** both channels correct and repeatable; **FAIL** refused or one speaker only (then investigate AirPlay 2 pairing, see ADR-003); **INCONCLUSIVE** discovery only. Result goes in the test log.
+
+Follow-ups if PASS: (a) check whether pyatv/libraop accept live PCM (pipe/stdin) rather than files; (b) decide Android route by licence and source review; (c) Experiment 1 on the phone.
+
+### Unresolved risks
+
+1. Pair acceptance of third-party senders (see above).
+2. Live (non-file) input to the sender; RAOP sender wants a continuous packet clock, Android capture clock differs, so drift handling is needed.
+3. libraop and AirConnect licenses unknown; GPL contamination if any GPL code is used.
+4. HomePod OS changes may break older RAOP behaviour (a Roon thread mentions a recent HomePod update; unverified).
+5. A clean-room Kotlin sender is real work and untested.
+
+### Fallbacks (require explicit owner approval before pursuing, ADR-003)
+
+- Always-on small bridge (Raspberry Pi/PC) receiving audio from Android over LAN and sending RAOP/AirPlay 2 via OwnTone or similar (GPL fine for a non-distributed personal bridge, but this changes the architecture).
+- USB interface connected directly to a Pi/Mac instead of Android.
+- Use an AirPlay-capable analog/line-in device as the source (this drops the Android goal).
+
 ## Experiment 1: minimum viable sender
 
 **Hypothesis:** an Android device can establish an authorized audio session and stream an original generated stereo test tone to the paired HomePods.
@@ -82,6 +143,7 @@ Do not treat a project's README claims as hardware verification.
 | Date | Hardware | Test | Result | Evidence |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Not yet specified | Project planning | Not tested | Initial architecture |
+| 2026-11-12 | None (desk research) | Phase 1 sender survey | UNVERIFIED, no hardware or code executed | Section 'Phase 1 findings' |
 
 ## Questions for owner
 

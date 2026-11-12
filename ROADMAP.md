@@ -12,10 +12,11 @@ Status legend: TODO · IN PROGRESS · BLOCKED · VERIFIED · NOT FEASIBLE.
 
 **Exit:** complete, realistic signal chain and test setup.
 
-## Phase 1 — AirPlay feasibility (TODO; highest risk)
+## Phase 1 — AirPlay feasibility (IN PROGRESS; desk research done, hardware BLOCKED on owner)
 
-- [ ] Audit existing sender implementations (not receivers) and licenses.
-- [ ] Identify protocol support: AirPlay 1 vs AirPlay 2, ALAC/PCM, pairing/auth, timing.
+- [x] Audit existing sender implementations (not receivers) and licenses. (Desk research only; libraop/AirConnect licenses and commit pins still TODO.)
+- [~] Identify protocol support: AirPlay 1 vs AirPlay 2, ALAC/PCM, pairing/auth, timing. (Reported only; not verified on hardware.)
+- [ ] Experiment 0: run pyatv RAOP test from a computer against the pair (BLOCKED: needs owner hardware; see docs/ARCHITECTURE.md).
 - [ ] Test mDNS discovery of the actual paired destination.
 - [ ] Establish authorized session from Android.
 - [ ] Play generated left/right stereo test audio on both HomePods.
@@ -62,4 +63,5 @@ Status legend: TODO · IN PROGRESS · BLOCKED · VERIFIED · NOT FEASIBLE.
 
 ## Current next action
 
-Codex: investigate Phase 1 **before implementing a full application**. Record factual evidence in docs/ARCHITECTURE.md and propose a minimal experiment. Owner: provide hardware inventory and run the on-device test.
+Provisional decision: conditional go for **Experiment 0** only; no Android scaffolding until it passes.
+Owner: run Experiment 0 from docs/ARCHITECTURE.md and report the results (sanitised) plus the hardware inventory (Phase 0). Agent: afterwards review libraop/pyatv source and licences and decide the Android route.
