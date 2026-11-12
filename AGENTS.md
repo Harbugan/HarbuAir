@@ -52,3 +52,7 @@ For every task:
 ## Definition of done for feasibility
 
 A documented real-device demonstration that plays a generated **stereo** signal from Android on the intended HomePod stereo pair, with repeatable connect/disconnect behavior. Anything less is research progress, not validated streaming.
+
+## Phase 1 layout (keep in sync)
+
+Kotlin packages under `app/src/main/java/dk/harbuair/`: `ui`, `discovery`, `engine`, `audio`, `diag`. Native JNI engine in `app/src/main/cpp/`. AirPlay sender: git submodule `third_party/airplay2-sender-cpp` (Apache-2.0, pinned commit; update docs/AIRPLAY_RESEARCH.md when bumping). New audio inputs implement `audio/AudioSource`; do not change the engine for them. Never log pairing material; credentials live only in `CredentialStore`. No hardware result may be marked PASSED without an entry in docs/TESTING.md / the evidence log.

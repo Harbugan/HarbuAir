@@ -1,6 +1,6 @@
 # HarbuAir technical architecture and evidence log
 
-**Status:** working hypothesis, not an implemented or verified architecture.
+**Status:** Phase 1 code written, **not yet compiled or run on hardware** (see docs/BUILD.md, docs/TESTING.md). Evidence for the sender choice: docs/AIRPLAY_RESEARCH.md.
 
 ## Goal and constraints
 
@@ -74,14 +74,35 @@ Do not treat a project's README claims as hardware verification.
 ## Decision record
 
 - ADR-001 (proposed): native Kotlin rather than web/PWA because reliable USB capture and foreground audio routing need Android platform APIs.
-- ADR-002 (pending): choose AirPlay sender only after evidence and real-device verification.
+- ADR-002 (accepted provisionally, 2026-11-12): use `airplay2-sender-cpp` (Apache-2.0) as native sender, pinned as submodule at `fc91350`. Rationale and unverified assumptions in AIRPLAY_RESEARCH.md. Revisit if Gate A fails.
+- ADR-004: minSdk 34 / arm64-v8a only for Phase 1 (target device is Android 15); NsdManager (no permissions) for discovery instead of a bundled mDNS stack.
+- ADR-005: no foreground service in Phase 1. Streaming stops in `onStop`, so nothing can run unseen. A foreground service is required in Phase 3 for screen-off use.
 - ADR-003 (pending): if pure Android is infeasible, compare local bridge options and request explicit owner approval before changing architecture.
+
+## Phase 1 module map (as implemented)
+
+```text
+ui/MainActivity, ui/StreamViewModel   UI + session state machine (ConnState)
+discovery/AirPlayDiscovery, Receiver  NsdManager: _airplay._tcp + _raop._tcp, TXT parsing, merge by name
+audio/AudioSource, ToneSource         PCM producer interface (int16 stereo); tone = 440 Hz, -20 dBFS, both/left/right
+engine/NativeEngine, CredentialStore  JNI wrapper; app-private pairing store; random per-install sender MAC
+diag/DiagLog                          in-memory log (300 lines) with secret-like token masking
+cpp/native_engine.cpp                 loop thread + command queue + SPSC PCM ring around RaopSender/RaopLoop
+third_party/airplay2-sender-cpp       submodule (Apache-2.0), pulls Mbed TLS at CMake configure time
+```
+
+Pipeline: `AudioSource.read()` (real-time paced coroutine, 0.5 s lead) -> JNI `pushPcm` -> lock-free ring (~3 s @ 44.1 kHz) -> library (linear resample to 44.1 kHz if needed, ALAC, ChaCha20-Poly1305, RTP/UDP) -> receiver. Stereo is preserved end-to-end (interleaved L/R, no downmix code). Sample format int16; the tone uses 44.1 kHz so no resampling occurs. Clock sync: the library answers the receiver's NTP-style timing requests; drift handling for a live source is **not** implemented (Phase 3). Threading: all `RaopSender` calls on one native thread; other threads only enqueue commands or push the ring.
+
+To add USB capture later: implement `AudioSource` (AudioRecord), no engine change. Root is not used.
 
 ## Test log
 
 | Date | Hardware | Test | Result | Evidence |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Not yet specified | Project planning | Not tested | Initial architecture |
+| 2026-11-12 | none (cloud container) | Source review of both candidate senders | Done (reading only) | docs/AIRPLAY_RESEARCH.md |
+| 2026-11-12 | none (cloud container) | `gradle build` of Android project | **FAILED to start**: AGP unresolvable, dl.google.com blocked | docs/BUILD.md |
+| 2026-11-12 | Xperia XZ1C + Apple TV/HomePods | Real AirPlay session | **UNVERIFIED** (not run) | docs/TESTING.md |
 
 ## Questions for owner
 

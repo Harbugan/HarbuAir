@@ -1,0 +1,16 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+.idea/
+*.iml
+.cxx/
+.externalNativeBuild/
+captures/
+# Never commit pairing material or device identifiers
+airplay_creds_*.json
+*.creds.json
+*.keystore
+*.jks

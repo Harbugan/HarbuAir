@@ -4,7 +4,9 @@
 
 HarbuAir aims to capture stereo audio from a turntable through a USB audio interface attached to an Android phone and stream it over the local network to an existing HomePod stereo pair (currently used as Apple TV speakers).
 
-> Status: feasibility research / proof of concept. **AirPlay 2 sending from Android to a HomePod stereo pair is NOT yet demonstrated.** Do not claim the product works until tested on real hardware.
+> Status: Phase 1 proof-of-concept code exists (discovery, pairing, 440 Hz stereo test tone via a third-party AirPlay 2 sender library) but has **not been compiled or tested on hardware**. Build: docs/BUILD.md. Test plan: docs/TESTING.md. Sender research: docs/AIRPLAY_RESEARCH.md.
+>
+> Feasibility research / proof of concept. **AirPlay 2 sending from Android to a HomePod stereo pair is NOT yet demonstrated.** Do not claim the product works until tested on real hardware.
 
 ## Intended signal path
 

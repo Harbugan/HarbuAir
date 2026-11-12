@@ -12,13 +12,13 @@ Status legend: TODO · IN PROGRESS · BLOCKED · VERIFIED · NOT FEASIBLE.
 
 **Exit:** complete, realistic signal chain and test setup.
 
-## Phase 1 — AirPlay feasibility (TODO; highest risk)
+## Phase 1 — AirPlay feasibility (IN PROGRESS; code written, hardware BLOCKED/UNVERIFIED; highest risk)
 
-- [ ] Audit existing sender implementations (not receivers) and licenses.
-- [ ] Identify protocol support: AirPlay 1 vs AirPlay 2, ALAC/PCM, pairing/auth, timing.
-- [ ] Test mDNS discovery of the actual paired destination.
-- [ ] Establish authorized session from Android.
-- [ ] Play generated left/right stereo test audio on both HomePods.
+- [x] Audit existing sender implementations (not receivers) and licenses. (docs/AIRPLAY_RESEARCH.md; choice: airplay2-sender-cpp)
+- [x] Identify protocol support (from source/README only; unverified on hardware).
+- [ ] Test mDNS discovery of the actual paired destination. (implemented, UNVERIFIED)
+- [ ] Establish authorized session from Android. (implemented, UNVERIFIED; project never compiled)
+- [ ] Play generated left/right stereo test audio on both HomePods. (tone source with L/R/both implemented, UNVERIFIED)
 - [ ] Test stop, restart, reconnection, and Apple TV interaction.
 - [ ] Document results, logs, constraints and go/no-go.
 
@@ -60,6 +60,14 @@ Status legend: TODO · IN PROGRESS · BLOCKED · VERIFIED · NOT FEASIBLE.
 - [ ] Review dependency licenses, security and privacy.
 - [ ] Consider signed release APK after hardware validation.
 
+## Phase 1 follow-ups / Phase 2 prerequisites
+
+1. First real build with Android SDK/NDK (BUILD.md); fix compile errors; run unit tests.
+2. Run TESTING.md T1-T7 on the Xperia + Apple TV/HomePods; fill the evidence log; decide Gate A and the option A/B/C routing.
+3. If Gate A passes: foreground service + audio focus, Wi-Fi change handling, pairing-credential encryption (Keystore), default strict receiver auth, reconnect logic.
+4. Then Phase 2 (USB capture behind the existing `AudioSource` interface) - do not start before Gate A.
+5. Fallbacks if HomePod pair is not addressable: Apple TV endpoint only; or ask owner before any bridge architecture.
+
 ## Current next action
 
-Codex: investigate Phase 1 **before implementing a full application**. Record factual evidence in docs/ARCHITECTURE.md and propose a minimal experiment. Owner: provide hardware inventory and run the on-device test.
+Owner: build the APK and run docs/TESTING.md on the real Xperia + Apple TV/HomePods; report results. Agent: fix whatever the first real build reveals.
